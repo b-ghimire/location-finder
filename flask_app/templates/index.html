@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+
+    <meta charset="utf-8">
+    <title>Location Finder</title>
+
+    <link href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" rel="stylesheet type='text/css" />
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css', _external=True) }}" rel="stylesheet type='text/css">
+    <link href="{{ url_for('static', filename='css/slider.css', _external=True) }}" rel="stylesheet type='text/css">
+    <link href="{{ url_for('static', filename='css/colorbrewer.css', _external=True) }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='css/app.css', _external=True) }}" rel="stylesheet" type="text/css">
+
+    <script src="http://code.jquery.com/jquery-1.9.1.js" type="text/javascript"></script>
+    <script src="/static/js/bootstrap-slider.js" type="text/javascript"></script>
+    <script src="/static/js/display-table.js" type="text/javascript"></script>
+    <script src="/static/js/display-slider.js" type="text/javascript"></script>
+    <script src="/static/js/d3.js" type="text/javascript"></script>
+    <script src="/static/js/colorbrewer.js" type="text/javascript"></script>
+
+  </head>
+
+  <body>
+
+    <div id="title-panel" class="panel">
+      <p><h3 style="margin-left:1.5em">Location Finder</h3></p>
+    </div>
+
+    <div id="side-panel" class="panel">
+
+      <p><h4 style="margin-left:2em">How important are the factors?</h4></p>
+
+      <form>
+
+        <div class="slider-box">
+          <label for="label_popDensity" class="label-class">High Population Density &nbsp;&nbsp;</label>
+          <input id="slider_popDensity" data-slider-id="id-popDensity" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_medianEarnings" class="label-class">High Earnings &nbsp;&nbsp;</label>
+          <input id="slider_medianEarnings" data-slider-id="id-medianEarnings" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_medianAge" class="label-class">Low Age &nbsp;&nbsp;</label>
+          <input id="slider_medianAge" data-slider-id="id-medianAge" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_percVancantHousingUnits" class="label-class">High Housing Availability &nbsp;&nbsp;</label>
+          <input id="slider_percVancantHousingUnits" data-slider-id="id-percVancantHousingUnits" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_percBachelorEducAndHigher" class="label-class">High Education &nbsp;&nbsp;</label>
+          <input id="slider_percBachelorEducAndHigher" data-slider-id="id-percBachelorEducAndHigher" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_rentAsPercOfHouseholdIncome" class="label-class">Low Rent &nbsp;&nbsp;</label>
+          <input id="slider_rentAsPercOfHouseholdIncome" data-slider-id="id-rentAsPercOfHouseholdIncome" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_unemploymentRate" class="label-class">Low Unemployment &nbsp;&nbsp;</label>
+          <input id="slider_unemploymentRate" data-slider-id="id-unemploymentRate" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_diabeticsRate" class="label-class">Good Health &nbsp;&nbsp;</label>
+          <input id="slider_diabeticsRate" data-slider-id="id-diabeticsRate" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="slider-box">
+          <label for="label_inactivityRate" class="label-class">Low Physical Inactivity &nbsp;&nbsp;</label>
+          <input id="slider_inactivityRate" data-slider-id="id-inactivityRate" class="slider-bar" value=5 data-slider-value=5 data-slider-tooltip="hide" />
+        </div>
+
+        <div class="submit-box">
+          <button type='button' id='submitBtn' class="submit-box">UPDATE MAP</button><br><br>
+        </div>
+
+      </form>
+
+    </div>
+
+    <div id="div-panel1" class="panel">
+    </div>
+
+    <div id="div-panel2" class="panel">
+    </div>
+
+    <div id="map-panel" class="panel">
+      <script type=text/javascript>
+
+        //set width and height
+        var wd = 1000; // width
+        var ht = 700; // height
+
+        //map projection
+        var projection = d3.geo.albersUsa()
+          .translate([wd / 2, ht / 3])
+          .scale([1100]);
+
+        //path generator
+        var path = d3.geo.path()
+          .projection(projection);
+
+        //SVG element
+        var svg = d3.select("#map-panel")
+          .append("svg")
+          .attr("width", wd)
+          .attr("height", ht);
+
+        //create tooltip
+        var tooltip = d3.select("#map-panel").append("div")
+          .attr("class", "tooltip");
+
+
+        //load GeoJSON
+        //when using url_for the json file is in the static folder
+        d3.json("{{ url_for('static', filename='census_county.geojson', _external=True) }}", function(json) {
+
+          //data binding
+          svg.selectAll("path")
+            .data(json.features)
+            .enter()
+            .append("path")
+            .attr("d", path)
+            .style("fill", "#ccc")
+            .on("mouseover", function(d) {
+
+              //position (x,y) of mouse on screen
+              var mouse = d3.mouse(svg.node()).map(function(d) {
+                return parseInt(d);
+              });
+
+              //display tooltip
+              tooltip.classed("hidden", false)
+                .attr("style", "left:" + (mouse[0] + 25) + "px;top:" + mouse[1] + "px")
+                .html(d.properties.NAME + " County")
+
+              //highlight selected path (i.e, polygon in this case)
+              d3.select(this)
+                .style("stroke", "red")
+
+            })
+
+          .on("mouseout", function() {
+            //change back to original color of path/polygon
+            d3.select(this)
+              .style("fill", "#ccc")
+              .style("stroke", "None")
+          });
+
+        });
+
+        //ajax request
+        var $SCRIPT_ROOT = {{
+            request.script_root | tojson | safe
+          }};
+
+        $(function() {
+          $("#submitBtn").click(function() {
+            $.ajax({
+              type: "GET",
+              url: $SCRIPT_ROOT + "/WLC/",
+              contentType: "application/json; charset=utf-8",
+              data: {
+                popDensity: $('input[id="slider_popDensity"]').val(),
+                medianEarnings: $('input[id="slider_medianEarnings"]').val(),
+                medianAge: $('input[id="slider_medianAge"]').val(),
+                percVancantHousingUnits: $('input[id="slider_percVancantHousingUnits"]').val(),
+                percBachelorEducAndHigher: $('input[id="slider_percBachelorEducAndHigher"]').val(),
+                rentAsPercOfHouseholdIncome: $('input[id="slider_rentAsPercOfHouseholdIncome"]').val(),
+                unemploymentRate: $('input[id="slider_unemploymentRate"]').val(),
+                diabeticsRate: $('input[id="slider_diabeticsRate"]').val(),
+                inactivityRate: $('input[id="slider_inactivityRate"]').val()
+
+              },
+
+              success: function(CensusData) {
+
+                //remove existing d3 elements (because they need to be updated based on ajax call)
+                d3.selectAll("path").remove(); //remove map
+                svg.selectAll('g.legendEntry').remove(); //remove map legend
+
+                //remove tooltip
+                tooltip.classed("hidden", true)
+
+                //remove div-panel
+                d3.select("#div-panel1").classed("hidden", true);
+                d3.select("#div-panel2").classed("hidden", true);
+
+                //load GeoJSON
+                //when using url_for the json file is in static folder
+                d3.json("{{ url_for('static', filename='census_county.geojson', _external=True) }}", function(json) {
+
+                  var color = d3.scale.quantize()
+                    .range(colorbrewer.Greens[9]);
+
+                  //joining the json features to the census data returned from the ajax call
+                  //loop for each of the census data values
+                  for (var i = 0; i < CensusData.CountyName.length; i++) {
+
+                    //loop for each feature in the geojson
+                    for (var j = 0; j < json.features.length; j++) {
+
+                      if (json.features[j].properties.STATE_ID == CensusData.StateFIPSCode[i] && json.features[j].properties.COUNTY_ID == CensusData.CountyFIPSCode[i]) {
+                        json.features[j].properties.weightedScores = CensusData.weightedScores[i];
+                        json.features[j].properties.rank = CensusData.rank[i];
+
+                        //need to do only first time the ajax call is made (as it does not change)
+                        if (json.features[j].properties.popDensity === undefined) {
+                          json.features[j].properties.popDensity = CensusData.popDensity[i];
+                          json.features[j].properties.medianEarnings = CensusData.medianEarnings[i];
+                          json.features[j].properties.medianAge = CensusData.medianAge[i];
+                          json.features[j].properties.percVancantHousingUnits = CensusData.percVancantHousingUnits[i];
+                          json.features[j].properties.percBachelorEducAndHigher = CensusData.percBachelorEducAndHigher[i];
+                          json.features[j].properties.rentAsPercOfHouseholdIncome = CensusData.rentAsPercOfHouseholdIncome[i];
+                          json.features[j].properties.unemploymentRate = CensusData.unemploymentRate[i];
+                          json.features[j].properties.diabeticsRate = CensusData.diabeticsRate[i];
+                          json.features[j].properties.healthIndex = CensusData.healthIndex[i];
+                          json.features[j].properties.inactivityRate = CensusData.inactivityRate[i];
+                        }
+
+                        break;
+                      }
+                    }
+                  }
+
+                  //set color domain
+                  color.domain([
+                    d3.min(json.features, function(d) {
+                      return d.properties.weightedScores;
+                    }),
+                    d3.max(json.features, function(d) {
+                      return d.properties.weightedScores;
+                    })
+                  ]);
+
+                  //data binding
+                  svg.selectAll("path")
+                    .data(json.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .style("fill", function(d) {
+                      var value = d.properties.weightedScores;
+                      return color(value); //converting numeric value to color
+                    })
+                    .on("click", function(d) {
+
+                      //remove old path stroke
+                      d3.selectAll("path")
+                        .style("stroke", "none");
+
+                      //set new selections
+                      d3.select(this)
+                        .style("stroke", "red")
+
+                      //display div panel
+                      d3.select("#div-panel1").classed("hidden", false);
+                      d3.select("#div-panel2").classed("hidden", false);
+
+                      var dataArr = [];
+
+                      //variable names and values
+                      var varNameValues = {
+                        "County": d.properties.NAME,
+                        "State": d.properties.STATE_NAME,
+                        "Population (per sq miles)": d.properties.popDensity,
+                        "Median Earnings ($ per year)": d.properties.medianEarnings,
+                        "Median Age (years)": d.properties.medianAge,
+                        "Vacant Housing Units (%)": d.properties.percVancantHousingUnits,
+                        "Education (% bachelors or higher)": d.properties.percBachelorEducAndHigher,
+                        "Rent (% of household income)": d.properties.rentAsPercOfHouseholdIncome,
+                        "Unemployment Rate (%)": d.properties.unemploymentRate,
+                        //"Healthy Population (%)": 100 - d.properties.diabeticsRate,
+                        "Health Index (0 - 1)": d.properties.healthIndex,
+                        "Physical Inactivity (%)": d.properties.inactivityRate,
+                        "Score": d.properties.weightedScores,
+                        "Rank": d.properties.rank
+                      };
+
+                      //reformat varNameValues data in a format consistent with displayTable function
+                      for (var key in varNameValues) {
+                        dataArr.push({
+                          "Variable": key,
+                          "Value": varNameValues[key]
+                        });
+
+                      }
+
+                      // split array into left and right half
+                      var halfLength = Math.floor(dataArr.length / 2);
+                      var leftArr = dataArr.slice(0, halfLength + 1);
+                      var rightArr = dataArr.slice(halfLength + 1, dataArr.length);
+
+                      // render the table
+                      var dataTable = displayTable(leftArr, ["Variable", "Value"], "margin-left: 40px", "#div-panel1");
+                      var dataTable = displayTable(rightArr, ["Variable", "Value"], "margin-left: 40px", "#div-panel2");
+
+                    })
+
+                  // places legend
+                  var legend = svg.selectAll('g.legendEntry')
+                    .data(color.range())
+                    .enter()
+                    .append('g').attr('class', 'legendEntry');
+
+                  legend.append('rect')
+                    .attr("x", 5)
+                    .attr("y", function(d, i) {
+                      return (8 - i) * 35;
+                    })
+                    .attr("width", 20)
+                    .attr("height", 35)
+                    .style("fill", function(d) {
+                      return d;
+                    });
+
+                  legend.append("text")
+                    .attr("x", 30)
+                    .attr("y", function(d, i) {
+                      return (8.3 - i) * 35;
+                    })
+                    .attr("dy", "0.8em")
+                    .text(function(d, i) {
+
+                      if (i == 0)
+                        return "Least Suitable"
+                      else if (i == 8)
+                        return "Most Suitable"
+
+                    });
+
+                });
+              },
+
+              error: function() {
+                alert("failure");
+              }
+            });
+          });
+        });
+
+      </script>
+    </div>
+  </body>
+
+</html>
