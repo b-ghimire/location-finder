@@ -6,5 +6,6 @@ The different factors are standardized using linear transformation and then aggr
 Web Application Framework: Python Flask <br>
 Backend: Python (NumPy, Pandas), SQLite <br>
 Frontend: HTML, CSS, JavaScript, jQuery, Ajax, Bootstrap, D3
-<br>
+
+<br><br>
 ![alt tag](https://raw.githubusercontent.com/b-ghimire/location-finder/master/flask_app/static/img/location_finder.png)
